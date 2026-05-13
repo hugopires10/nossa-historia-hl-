@@ -199,6 +199,29 @@ function showStatus(message) {
   console.warn(message);
 }
 
+function friendlyAuthError(error) {
+  const message = error?.message || "";
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes("email not confirmed")) {
+    return "Esse email ainda nao foi confirmado no Supabase. Va em Authentication > Users e confirme o usuario, ou recrie marcando Auto Confirm.";
+  }
+
+  if (lowerMessage.includes("invalid login credentials")) {
+    return "Email ou senha incorretos. Confira se voce criou o usuario em Authentication > Users e digitou a senha certa.";
+  }
+
+  if (lowerMessage.includes("invalid api key") || lowerMessage.includes("jwt")) {
+    return "A chave do Supabase parece incorreta. Confira a Publishable key no arquivo script.js.";
+  }
+
+  if (lowerMessage.includes("failed to fetch") || lowerMessage.includes("network")) {
+    return "Nao consegui conectar ao Supabase. Confira sua internet e se a Project URL esta certa.";
+  }
+
+  return `Erro do Supabase: ${message || "nao foi possivel entrar."}`;
+}
+
 function formatDate(dateString) {
   if (!dateString) return "Sem data";
   const date = new Date(`${dateString}T12:00:00`);
@@ -506,7 +529,8 @@ function bindEvents() {
     setButtonLoading(button, false, "Entrando...", "Entrar");
 
     if (error || !data.session) {
-      elements.passwordError.textContent = "Email ou senha incorretos.";
+      elements.passwordError.textContent = friendlyAuthError(error);
+      console.warn("Supabase login error:", error);
       elements.passwordInput.select();
       return;
     }
