@@ -710,7 +710,8 @@ function bindEvents() {
     setButtonLoading(button, false, "Adicionando...", "Adicionar lugar");
 
     if (error) {
-      alert("Nao consegui adicionar o lugar. Rode o SQL atualizado no Supabase.");
+      console.error("Supabase place insert error:", error);
+      alert(`Nao consegui adicionar o lugar.\n\nErro do Supabase: ${error.message || "sem detalhe"}`);
       return;
     }
 
