@@ -51,6 +51,15 @@ body {
   letter-spacing: 0;
 }
 
+body.auth-locked {
+  overflow: hidden;
+}
+
+body.auth-locked .topbar,
+body.auth-locked main {
+  display: none;
+}
+
 button,
 input,
 textarea {
@@ -75,6 +84,63 @@ a {
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(16px);
+}
+
+.password-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.password-screen[hidden] {
+  display: none;
+}
+
+.password-card {
+  width: min(100%, 430px);
+  padding: clamp(24px, 6vw, 40px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.password-card label + label {
+  margin-top: 14px;
+}
+
+.password-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 24px;
+  color: #fff;
+  background: var(--rose);
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: 900;
+  box-shadow: 0 14px 30px rgba(192, 38, 90, 0.22);
+}
+
+.password-card h1 {
+  max-width: none;
+  margin-bottom: 12px;
+  font-size: clamp(2.2rem, 8vw, 4rem);
+}
+
+.password-copy {
+  margin-bottom: 24px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.password-error {
+  min-height: 22px;
+  margin: 10px 0 14px;
+  color: var(--rose-deep);
+  font-weight: 800;
 }
 
 .brand,

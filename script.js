@@ -1,4 +1,7 @@
+const SUPABASE_URL = "https://xugajfhjrpmelehzupht.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_dVFiJ4jGMW3SYm1u-gbRog_xyD003yy";
 const STORAGE_KEY = "nossa-historia-site-v1";
+const BUCKET_NAME = "couple-photos";
 
 const defaultState = {
   settings: {
@@ -6,35 +9,15 @@ const defaultState = {
     personTwo: "Meu amor",
     startDate: "2024-02-14"
   },
-  photos: [
-    {
-      id: "demo-photo-1",
-      caption: "Nossa foto favorita",
-      date: "2024-02-14",
-      image: ""
-    }
-  ],
-  memories: [
-    {
-      id: "demo-memory-1",
-      title: "O dia em que tudo ficou oficial",
-      date: "2024-02-14",
-      place: "Nosso lugar especial",
-      note: "Troque este texto por uma lembranca de voces dois."
-    },
-    {
-      id: "demo-memory-2",
-      title: "Um passeio que merece replay",
-      date: "2024-06-12",
-      place: "Aquela rua bonita",
-      note: "Guarde aqui pequenos detalhes: uma musica, uma risada, uma frase."
-    }
-  ],
+  photos: [],
+  memories: [],
   theme: "light"
 };
 
-let state = loadState();
+let state = loadLocalState();
 let counterTimer;
+let currentUser = null;
+let supabaseClient = null;
 
 const elements = {
   heroTitle: document.querySelector("#heroTitle"),
@@ -58,13 +41,19 @@ const elements = {
   timeline: document.querySelector("#timeline"),
   placesGrid: document.querySelector("#placesGrid"),
   themeToggle: document.querySelector("#themeToggle"),
+  logoutButton: document.querySelector("#logoutButton"),
   exportButton: document.querySelector("#exportButton"),
   resetDemoButton: document.querySelector("#resetDemoButton"),
   photoJumpButton: document.querySelector("#photoJumpButton"),
+  passwordScreen: document.querySelector("#passwordScreen"),
+  loginForm: document.querySelector("#loginForm"),
+  emailInput: document.querySelector("#emailInput"),
+  passwordInput: document.querySelector("#passwordInput"),
+  passwordError: document.querySelector("#passwordError"),
   emptyTemplate: document.querySelector("#emptyStateTemplate")
 };
 
-function loadState() {
+function loadLocalState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!saved) return structuredClone(defaultState);
@@ -78,12 +67,136 @@ function loadState() {
   }
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveLocalState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme: state.theme }));
 }
 
-function uid(prefix) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+function initSupabase() {
+  if (!window.supabase?.createClient) {
+    elements.passwordError.textContent = "Nao consegui carregar a conexao. Confira sua internet e recarregue.";
+    return false;
+  }
+
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  return true;
+}
+
+function showLogin(message = "") {
+  currentUser = null;
+  document.body.classList.add("auth-locked");
+  elements.passwordScreen.removeAttribute("hidden");
+  elements.passwordError.textContent = message;
+}
+
+async function unlockSite(session) {
+  currentUser = session.user;
+  document.body.classList.remove("auth-locked");
+  elements.passwordScreen.setAttribute("hidden", "");
+  await loadRemoteData();
+}
+
+async function boot() {
+  applyTheme();
+  renderAll();
+  bindEvents();
+
+  if (!initSupabase()) return;
+
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error || !data.session) {
+    showLogin();
+    return;
+  }
+
+  await unlockSite(data.session);
+}
+
+async function loadRemoteData() {
+  await Promise.all([loadSettings(), loadPhotos(), loadMemories()]);
+  renderAll();
+}
+
+async function loadSettings() {
+  const { data, error } = await supabaseClient
+    .from("couple_settings")
+    .select("person_one, person_two, start_date")
+    .eq("id", "main")
+    .maybeSingle();
+
+  if (error) {
+    showStatus("Nao consegui carregar os detalhes do casal. Rode o SQL de configuracao no Supabase.");
+    return;
+  }
+
+  if (data) {
+    state.settings = {
+      personOne: data.person_one || defaultState.settings.personOne,
+      personTwo: data.person_two || defaultState.settings.personTwo,
+      startDate: data.start_date || defaultState.settings.startDate
+    };
+  }
+}
+
+async function loadPhotos() {
+  const { data, error } = await supabaseClient
+    .from("photos")
+    .select("id, caption, photo_date, file_path, created_at")
+    .order("photo_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    showStatus("Nao consegui carregar as fotos. Confira a tabela photos e as permissoes.");
+    state.photos = [];
+    return;
+  }
+
+  state.photos = await Promise.all((data || []).map(async (photo) => {
+    const signedUrl = await getSignedPhotoUrl(photo.file_path);
+    return {
+      id: photo.id,
+      caption: photo.caption,
+      date: photo.photo_date,
+      filePath: photo.file_path,
+      image: signedUrl
+    };
+  }));
+}
+
+async function getSignedPhotoUrl(filePath) {
+  const { data, error } = await supabaseClient
+    .storage
+    .from(BUCKET_NAME)
+    .createSignedUrl(filePath, 60 * 60);
+
+  if (error) return "";
+  return data.signedUrl;
+}
+
+async function loadMemories() {
+  const { data, error } = await supabaseClient
+    .from("memories")
+    .select("id, title, memory_date, place, note, created_at")
+    .order("memory_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    showStatus("Nao consegui carregar os momentos. Confira a tabela memories e as permissoes.");
+    state.memories = [];
+    return;
+  }
+
+  state.memories = (data || []).map((memory) => ({
+    id: memory.id,
+    title: memory.title,
+    date: memory.memory_date,
+    place: memory.place,
+    note: memory.note
+  }));
+}
+
+function showStatus(message) {
+  elements.passwordError.textContent = message;
+  console.warn(message);
 }
 
 function formatDate(dateString) {
@@ -208,7 +321,7 @@ function renderPhotos() {
       <h3>${escapeHtml(photo.caption || "Uma memoria bonita")}</h3>
     `;
     article.appendChild(body);
-    article.appendChild(createDeleteButton("Excluir foto", () => deletePhoto(photo.id)));
+    article.appendChild(createDeleteButton("Excluir foto", () => deletePhoto(photo.id, photo.filePath)));
     elements.photoGrid.appendChild(article);
   });
 }
@@ -285,21 +398,39 @@ function mapsUrl(place) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
 }
 
-function deletePhoto(id) {
-  state.photos = state.photos.filter((photo) => photo.id !== id);
-  saveState();
+async function deletePhoto(id, filePath) {
+  if (!confirm("Excluir esta foto?")) return;
+
+  if (filePath) {
+    await supabaseClient.storage.from(BUCKET_NAME).remove([filePath]);
+  }
+
+  const { error } = await supabaseClient.from("photos").delete().eq("id", id);
+  if (error) {
+    alert("Nao consegui excluir a foto.");
+    return;
+  }
+
+  await loadPhotos();
   renderPhotos();
 }
 
-function deleteMemory(id) {
-  state.memories = state.memories.filter((memory) => memory.id !== id);
-  saveState();
+async function deleteMemory(id) {
+  if (!confirm("Excluir este momento?")) return;
+
+  const { error } = await supabaseClient.from("memories").delete().eq("id", id);
+  if (error) {
+    alert("Nao consegui excluir o momento.");
+    return;
+  }
+
+  await loadMemories();
   renderMemories();
 }
 
 function escapeHtml(value) {
   const div = document.createElement("div");
-  div.textContent = value;
+  div.textContent = value || "";
   return div.innerHTML;
 }
 
@@ -313,7 +444,7 @@ async function resizeImage(file) {
   canvas.height = Math.round(image.height * ratio);
   const context = canvas.getContext("2d");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.82);
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
 }
 
 function readFileAsDataUrl(file) {
@@ -334,6 +465,15 @@ function loadImage(src) {
   });
 }
 
+function cleanFileName(name) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9.]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function downloadJson() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -346,15 +486,62 @@ function downloadJson() {
   URL.revokeObjectURL(url);
 }
 
+function setButtonLoading(button, isLoading, loadingText, normalText) {
+  button.disabled = isLoading;
+  button.textContent = isLoading ? loadingText : normalText;
+}
+
 function bindEvents() {
-  elements.settingsForm.addEventListener("submit", (event) => {
+  elements.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.settings = {
+    const button = elements.loginForm.querySelector("button");
+    setButtonLoading(button, true, "Entrando...", "Entrar");
+    elements.passwordError.textContent = "";
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: elements.emailInput.value.trim(),
+      password: elements.passwordInput.value
+    });
+
+    setButtonLoading(button, false, "Entrando...", "Entrar");
+
+    if (error || !data.session) {
+      elements.passwordError.textContent = "Email ou senha incorretos.";
+      elements.passwordInput.select();
+      return;
+    }
+
+    await unlockSite(data.session);
+  });
+
+  elements.settingsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const nextSettings = {
       personOne: elements.personOne.value.trim() || "Eu",
       personTwo: elements.personTwo.value.trim() || "Meu amor",
       startDate: elements.startDate.value || defaultState.settings.startDate
     };
-    saveState();
+
+    const button = elements.settingsForm.querySelector("button");
+    setButtonLoading(button, true, "Salvando...", "Salvar");
+
+    const { error } = await supabaseClient.from("couple_settings").upsert({
+      id: "main",
+      person_one: nextSettings.personOne,
+      person_two: nextSettings.personTwo,
+      start_date: nextSettings.startDate,
+      updated_by: currentUser.id
+    });
+
+    setButtonLoading(button, false, "Salvando...", "Salvar");
+
+    if (error) {
+      alert("Nao consegui salvar os detalhes do casal.");
+      return;
+    }
+
+    state.settings = nextSettings;
     renderSettings();
     renderCounter();
   });
@@ -362,57 +549,98 @@ function bindEvents() {
   elements.photoForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const file = elements.photoInput.files[0];
-    if (!file) return;
+    if (!file || !currentUser) return;
 
     const button = elements.photoForm.querySelector("button");
-    button.disabled = true;
-    button.textContent = "Carregando...";
+    setButtonLoading(button, true, "Enviando...", "Adicionar foto");
 
     try {
-      const image = await resizeImage(file);
-      state.photos.push({
-        id: uid("photo"),
-        caption: elements.photoCaption.value.trim() || "Uma memoria bonita",
-        date: elements.photoDate.value || new Date().toISOString().slice(0, 10),
-        image
+      const imageBlob = await resizeImage(file);
+      const fileName = `${Date.now()}-${cleanFileName(file.name).replace(/\.[^.]+$/, "")}.jpg`;
+      const filePath = `${currentUser.id}/${fileName}`;
+      const upload = await supabaseClient.storage.from(BUCKET_NAME).upload(filePath, imageBlob, {
+        contentType: "image/jpeg",
+        upsert: false
       });
-      saveState();
+
+      if (upload.error) throw upload.error;
+
+      const insert = await supabaseClient.from("photos").insert({
+        caption: elements.photoCaption.value.trim() || "Uma memoria bonita",
+        photo_date: elements.photoDate.value || new Date().toISOString().slice(0, 10),
+        file_path: filePath,
+        created_by: currentUser.id
+      });
+
+      if (insert.error) throw insert.error;
+
       elements.photoForm.reset();
+      await loadPhotos();
       renderPhotos();
       document.querySelector("#fotos").scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error(error);
+      alert("Nao consegui enviar a foto. Confira o bucket e as permissoes no Supabase.");
     } finally {
-      button.disabled = false;
-      button.textContent = "Adicionar foto";
+      setButtonLoading(button, false, "Enviando...", "Adicionar foto");
     }
   });
 
-  elements.memoryForm.addEventListener("submit", (event) => {
+  elements.memoryForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    state.memories.push({
-      id: uid("memory"),
+    const button = elements.memoryForm.querySelector("button");
+    setButtonLoading(button, true, "Guardando...", "Guardar momento");
+
+    const { error } = await supabaseClient.from("memories").insert({
       title: elements.memoryTitle.value.trim(),
-      date: elements.memoryDate.value,
+      memory_date: elements.memoryDate.value,
       place: elements.memoryPlace.value.trim(),
-      note: elements.memoryNote.value.trim()
+      note: elements.memoryNote.value.trim(),
+      created_by: currentUser.id
     });
-    saveState();
+
+    setButtonLoading(button, false, "Guardando...", "Guardar momento");
+
+    if (error) {
+      alert("Nao consegui guardar o momento.");
+      return;
+    }
+
     elements.memoryForm.reset();
+    await loadMemories();
     renderMemories();
     document.querySelector("#momentos").scrollIntoView({ behavior: "smooth" });
   });
 
   elements.themeToggle.addEventListener("click", () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
-    saveState();
+    saveLocalState();
     applyTheme();
+  });
+
+  elements.logoutButton.addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    showLogin();
   });
 
   elements.exportButton.addEventListener("click", downloadJson);
 
-  elements.resetDemoButton.addEventListener("click", () => {
-    state = structuredClone(defaultState);
-    saveState();
-    renderAll();
+  elements.resetDemoButton.addEventListener("click", async () => {
+    if (!confirm("Restaurar os textos de exemplo? Isso muda os detalhes do casal, mas nao apaga fotos ou momentos.")) return;
+
+    const { error } = await supabaseClient.from("couple_settings").upsert({
+      id: "main",
+      person_one: defaultState.settings.personOne,
+      person_two: defaultState.settings.personTwo,
+      start_date: defaultState.settings.startDate,
+      updated_by: currentUser.id
+    });
+
+    if (!error) {
+      state.settings = structuredClone(defaultState.settings);
+      renderSettings();
+      renderCounter();
+    }
   });
 
   elements.photoJumpButton.addEventListener("click", () => {
@@ -431,5 +659,4 @@ function renderAll() {
   counterTimer = setInterval(renderCounter, 1000);
 }
 
-bindEvents();
-renderAll();
+boot();

@@ -6,7 +6,26 @@
     <title>Nossa Historia</title>
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
+  <body class="auth-locked">
+    <section class="password-screen" id="passwordScreen" aria-label="Entrada protegida">
+      <form class="password-card" id="loginForm">
+        <span class="password-mark">N</span>
+        <p class="kicker">So para voces</p>
+        <h1>Entrar</h1>
+        <p class="password-copy">Use o email e a senha criados no Supabase.</p>
+        <label>
+          <span>Email</span>
+          <input id="emailInput" name="email" type="email" autocomplete="email" required>
+        </label>
+        <label>
+          <span>Senha</span>
+          <input id="passwordInput" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <p class="password-error" id="passwordError" role="alert"></p>
+        <button class="button" type="submit">Entrar</button>
+      </form>
+    </section>
+
     <header class="topbar">
       <a class="brand" href="#inicio" aria-label="Ir para o inicio">
         <span class="brand-mark">N</span>
@@ -21,6 +40,7 @@
         <button class="icon-button" id="themeToggle" type="button" aria-label="Alternar tema" title="Alternar tema">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm0 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm8-7h-1a1 1 0 1 0 0 2h1a1 1 0 1 0 0-2ZM5 11H4a1 1 0 1 0 0 2h1a1 1 0 1 0 0-2Zm12.66-5.66a1 1 0 0 1 1.41 1.41l-.7.71a1 1 0 0 1-1.42-1.42l.71-.7ZM6.05 16.95a1 1 0 0 1 .71 1.7l-.71.71a1 1 0 0 1-1.41-1.41l.7-.71a1 1 0 0 1 .71-.29Zm12.32.29.7.71a1 1 0 0 1-1.41 1.41l-.71-.7a1 1 0 1 1 1.42-1.42ZM5.34 5.34a1 1 0 0 1 1.42 0l.7.7a1 1 0 1 1-1.42 1.42l-.7-.71a1 1 0 0 1 0-1.41Z"/></svg>
         </button>
+        <button class="button button-small button-quiet" id="logoutButton" type="button">Sair</button>
         <button class="button button-small" id="exportButton" type="button">Exportar</button>
       </div>
     </header>
@@ -156,6 +176,7 @@
       </div>
     </template>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
   </body>
 </html>
