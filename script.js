@@ -11,6 +11,7 @@ const defaultState = {
   },
   photos: [],
   memories: [],
+  places: [],
   theme: "light"
 };
 
@@ -37,6 +38,9 @@ const elements = {
   memoryDate: document.querySelector("#memoryDate"),
   memoryPlace: document.querySelector("#memoryPlace"),
   memoryNote: document.querySelector("#memoryNote"),
+  placeForm: document.querySelector("#placeForm"),
+  placeName: document.querySelector("#placeName"),
+  placeNote: document.querySelector("#placeNote"),
   photoGrid: document.querySelector("#photoGrid"),
   timeline: document.querySelector("#timeline"),
   placesGrid: document.querySelector("#placesGrid"),
@@ -112,7 +116,7 @@ async function boot() {
 }
 
 async function loadRemoteData() {
-  await Promise.all([loadSettings(), loadPhotos(), loadMemories()]);
+  await Promise.all([loadSettings(), loadPhotos(), loadMemories(), loadPlaces()]);
   renderAll();
 }
 
@@ -191,6 +195,26 @@ async function loadMemories() {
     date: memory.memory_date,
     place: memory.place,
     note: memory.note
+  }));
+}
+
+async function loadPlaces() {
+  const { data, error } = await supabaseClient
+    .from("places")
+    .select("id, name, note, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    showStatus("Nao consegui carregar os lugares. Rode o SQL atualizado no Supabase.");
+    state.places = [];
+    return;
+  }
+
+  state.places = (data || []).map((place) => ({
+    id: place.id,
+    name: place.name,
+    note: place.note,
+    direct: true
   }));
 }
 
@@ -379,7 +403,7 @@ function renderMemories() {
 
 function renderPlaces() {
   elements.placesGrid.replaceChildren();
-  const places = state.memories
+  const placesFromMemories = state.memories
     .filter((memory) => memory.place)
     .reduce((acc, memory) => {
       const key = memory.place.trim().toLowerCase();
@@ -390,10 +414,23 @@ function renderPlaces() {
       return acc;
     }, new Map());
 
-  const placeList = [...places.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  const directPlaces = state.places.map((place) => {
+    const matchingMemoryPlace = placesFromMemories.get(place.name.trim().toLowerCase());
+    return {
+      ...place,
+      count: matchingMemoryPlace?.count || 0
+    };
+  });
+
+  const directPlaceKeys = new Set(directPlaces.map((place) => place.name.trim().toLowerCase()));
+  const memoryOnlyPlaces = [...placesFromMemories.values()]
+    .filter((place) => !directPlaceKeys.has(place.name.trim().toLowerCase()));
+
+  const placeList = [...directPlaces, ...memoryOnlyPlaces]
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
   if (!placeList.length) {
-    elements.placesGrid.appendChild(emptyState("L", "Quando voce adicionar lugares nos momentos, eles aparecem aqui."));
+    elements.placesGrid.appendChild(emptyState("L", "Adicione um lugar especial ou preencha o campo Lugar em um momento."));
     return;
   }
 
@@ -403,11 +440,21 @@ function renderPlaces() {
     article.innerHTML = `
       <div class="place-index">${index + 1}</div>
       <h3>${escapeHtml(place.name)}</h3>
-      <p>${place.count} ${place.count === 1 ? "momento guardado" : "momentos guardados"} neste lugar.</p>
-      <a class="map-link" href="${mapsUrl(place.name)}" target="_blank" rel="noreferrer">Ver no mapa</a>
+      <p>${escapeHtml(place.note || placeSummary(place.count))}</p>
+      <div class="memory-actions">
+        <a class="map-link" href="${mapsUrl(place.name)}" target="_blank" rel="noreferrer">Ver no mapa</a>
+      </div>
     `;
+    if (place.direct) {
+      article.appendChild(createDeleteButton("Excluir lugar", () => deletePlace(place.id)));
+    }
     elements.placesGrid.appendChild(article);
   });
+}
+
+function placeSummary(count) {
+  if (count > 0) return `${count} ${count === 1 ? "momento guardado" : "momentos guardados"} neste lugar.`;
+  return "Lugar especial guardado no mapa afetivo de voces.";
 }
 
 function emptyState(initial, text) {
@@ -449,6 +496,19 @@ async function deleteMemory(id) {
 
   await loadMemories();
   renderMemories();
+}
+
+async function deletePlace(id) {
+  if (!confirm("Excluir este lugar?")) return;
+
+  const { error } = await supabaseClient.from("places").delete().eq("id", id);
+  if (error) {
+    alert("Nao consegui excluir o lugar.");
+    return;
+  }
+
+  await loadPlaces();
+  renderPlaces();
 }
 
 function escapeHtml(value) {
@@ -634,6 +694,30 @@ function bindEvents() {
     await loadMemories();
     renderMemories();
     document.querySelector("#momentos").scrollIntoView({ behavior: "smooth" });
+  });
+
+  elements.placeForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = elements.placeForm.querySelector("button");
+    setButtonLoading(button, true, "Adicionando...", "Adicionar lugar");
+
+    const { error } = await supabaseClient.from("places").insert({
+      name: elements.placeName.value.trim(),
+      note: elements.placeNote.value.trim(),
+      created_by: currentUser.id
+    });
+
+    setButtonLoading(button, false, "Adicionando...", "Adicionar lugar");
+
+    if (error) {
+      alert("Nao consegui adicionar o lugar. Rode o SQL atualizado no Supabase.");
+      return;
+    }
+
+    elements.placeForm.reset();
+    await loadPlaces();
+    renderPlaces();
+    document.querySelector("#lugares").scrollIntoView({ behavior: "smooth" });
   });
 
   elements.themeToggle.addEventListener("click", () => {

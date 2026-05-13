@@ -158,6 +158,24 @@
         <div class="timeline" id="timeline" aria-live="polite"></div>
       </section>
 
+      <section class="section place-editor-section">
+        <div class="editor-panel place-editor">
+          <p class="kicker">Guardar destino</p>
+          <h2>Novo lugar</h2>
+          <form id="placeForm" class="stack-form">
+            <label>
+              <span>Nome do lugar</span>
+              <input id="placeName" name="name" type="text" maxlength="90" placeholder="Ex: Parque, praia, restaurante..." required>
+            </label>
+            <label>
+              <span>O que esse lugar significa?</span>
+              <textarea id="placeNote" name="note" maxlength="220" rows="4" placeholder="Uma frase sobre por que esse lugar e especial."></textarea>
+            </label>
+            <button class="button" type="submit">Adicionar lugar</button>
+          </form>
+        </div>
+      </section>
+
       <section class="section places-section" id="lugares">
         <div class="section-heading">
           <div>

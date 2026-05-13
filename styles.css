@@ -519,6 +519,15 @@ textarea:focus {
   padding: clamp(20px, 4vw, 32px);
 }
 
+.place-editor-section {
+  padding-top: 0;
+}
+
+.place-editor {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
 .stack-form {
   display: grid;
   gap: 16px;
