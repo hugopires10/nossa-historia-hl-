@@ -389,6 +389,7 @@ label {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -403,6 +404,11 @@ input {
   padding: 0 12px;
 }
 
+select {
+  min-height: 44px;
+  padding: 0 12px;
+}
+
 textarea {
   min-height: 120px;
   padding: 12px;
@@ -410,6 +416,7 @@ textarea {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--rose);
   box-shadow: 0 0 0 4px rgba(192, 38, 90, 0.13);
@@ -494,6 +501,19 @@ textarea:focus {
   margin: 0;
   color: var(--teal);
   font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.memory-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin-bottom: 10px;
+  padding: 0 10px;
+  color: var(--rose-deep);
+  background: color-mix(in srgb, var(--rose) 12%, transparent);
+  border-radius: 999px;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 

@@ -48,7 +48,7 @@
     <main>
       <section class="intro" id="inicio">
         <div class="intro-copy">
-          <p class="kicker">Um lugar so de voces</p>
+          <p class="kicker">So nosso</p>
           <h1 id="heroTitle">Nossa Historia</h1>
           <p id="heroSubtitle">Cada foto, lugar e detalhe que vale a pena guardar.</p>
           <div class="intro-actions">
@@ -140,6 +140,17 @@
               </label>
             </div>
             <label>
+              <span>Tipo de momento</span>
+              <select id="memoryCategory" name="category">
+                <option value="Data especial">Data especial</option>
+                <option value="Primeira vez">Primeira vez</option>
+                <option value="Viagem">Viagem</option>
+                <option value="Risada">Risada</option>
+                <option value="Conquista">Conquista</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </label>
+            <label>
               <span>Detalhes</span>
               <textarea id="memoryNote" name="note" maxlength="260" rows="4" placeholder="O que voce quer lembrar desse dia?"></textarea>
             </label>
@@ -196,6 +207,6 @@
     </template>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=4"></script>
   </body>
 </html>

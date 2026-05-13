@@ -37,6 +37,7 @@ const elements = {
   memoryTitle: document.querySelector("#memoryTitle"),
   memoryDate: document.querySelector("#memoryDate"),
   memoryPlace: document.querySelector("#memoryPlace"),
+  memoryCategory: document.querySelector("#memoryCategory"),
   memoryNote: document.querySelector("#memoryNote"),
   placeForm: document.querySelector("#placeForm"),
   placeName: document.querySelector("#placeName"),
@@ -180,7 +181,7 @@ async function getSignedPhotoUrl(filePath) {
 async function loadMemories() {
   const { data, error } = await supabaseClient
     .from("memories")
-    .select("id, title, memory_date, place, note, created_at")
+    .select("id, title, memory_date, place, category, note, created_at")
     .order("memory_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
@@ -195,6 +196,7 @@ async function loadMemories() {
     title: memory.title,
     date: memory.memory_date,
     place: memory.place,
+    category: memory.category || "Data especial",
     note: memory.note
   }));
 }
@@ -395,6 +397,7 @@ function renderMemories() {
     article.className = "memory-card";
     article.innerHTML = `
       <p class="card-date">${formatDate(memory.date)}</p>
+      <span class="memory-tag">${escapeHtml(memory.category || "Data especial")}</span>
       <h3>${escapeHtml(memory.title)}</h3>
       <p>${escapeHtml(memory.note || "Sem detalhes ainda.")}</p>
       <div class="memory-actions">
@@ -687,6 +690,7 @@ function bindEvents() {
       title: elements.memoryTitle.value.trim(),
       memory_date: elements.memoryDate.value,
       place: elements.memoryPlace.value.trim(),
+      category: elements.memoryCategory.value,
       note: elements.memoryNote.value.trim(),
       created_by: currentUser.id
     });
@@ -704,43 +708,46 @@ function bindEvents() {
     document.querySelector("#momentos").scrollIntoView({ behavior: "smooth" });
   });
 
-  elements.placeForm.addEventListener("submit", async (event) => {
+  elements.placeForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = elements.placeForm.querySelector("button");
-    elements.placeStatus.classList.remove("success");
-    elements.placeStatus.textContent = "";
+    const status = elements.placeStatus;
+    status?.classList.remove("success");
+    if (status) status.textContent = "Tentando adicionar...";
 
     if (!currentUser?.id) {
-      elements.placeStatus.textContent = "Sua sessao expirou. Clique em Sair e entre de novo.";
+      const message = "Sua sessao expirou. Clique em Sair e entre de novo.";
+      if (status) status.textContent = message;
+      alert(message);
       return;
     }
 
     setButtonLoading(button, true, "Adicionando...", "Adicionar lugar");
 
-    const { data, error } = await supabaseClient.from("places").insert({
-      name: elements.placeName.value.trim(),
-      note: elements.placeNote.value.trim(),
+    const placeName = elements.placeName.value.trim();
+    const placeNote = elements.placeNote.value.trim();
+    const { error } = await supabaseClient.from("places").insert({
+      name: placeName,
+      note: placeNote || null,
       created_by: currentUser.id
-    }).select("id, name, note, created_at").single();
+    });
 
     setButtonLoading(button, false, "Adicionando...", "Adicionar lugar");
 
     if (error) {
       console.error("Supabase place insert error:", error);
-      elements.placeStatus.textContent = `Erro do Supabase: ${supabaseErrorText(error)}`;
+      const message = `Erro do Supabase: ${supabaseErrorText(error)}`;
+      if (status) status.textContent = message;
+      alert(message);
       return;
     }
 
     elements.placeForm.reset();
-    state.places = [{
-      id: data.id,
-      name: data.name,
-      note: data.note,
-      direct: true
-    }, ...state.places.filter((place) => place.id !== data.id)];
+    await loadPlaces();
     renderPlaces();
-    elements.placeStatus.classList.add("success");
-    elements.placeStatus.textContent = "Lugar adicionado.";
+    status?.classList.add("success");
+    if (status) status.textContent = "Lugar adicionado.";
+    alert("Lugar adicionado.");
     document.querySelector("#lugares").scrollIntoView({ behavior: "smooth" });
   });
 
