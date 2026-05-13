@@ -143,6 +143,17 @@ a {
   font-weight: 800;
 }
 
+.form-status {
+  min-height: 22px;
+  margin: 0;
+  color: var(--rose-deep);
+  font-weight: 800;
+}
+
+.form-status.success {
+  color: var(--teal);
+}
+
 .brand,
 .nav-links,
 .topbar-actions,

@@ -41,6 +41,7 @@ const elements = {
   placeForm: document.querySelector("#placeForm"),
   placeName: document.querySelector("#placeName"),
   placeNote: document.querySelector("#placeNote"),
+  placeStatus: document.querySelector("#placeStatus"),
   photoGrid: document.querySelector("#photoGrid"),
   timeline: document.querySelector("#timeline"),
   placesGrid: document.querySelector("#placesGrid"),
@@ -244,6 +245,13 @@ function friendlyAuthError(error) {
   }
 
   return `Erro do Supabase: ${message || "nao foi possivel entrar."}`;
+}
+
+function supabaseErrorText(error) {
+  if (!error) return "sem detalhe";
+  return [error.message, error.details, error.hint, error.code]
+    .filter(Boolean)
+    .join(" | ");
 }
 
 function formatDate(dateString) {
@@ -699,25 +707,40 @@ function bindEvents() {
   elements.placeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = elements.placeForm.querySelector("button");
+    elements.placeStatus.classList.remove("success");
+    elements.placeStatus.textContent = "";
+
+    if (!currentUser?.id) {
+      elements.placeStatus.textContent = "Sua sessao expirou. Clique em Sair e entre de novo.";
+      return;
+    }
+
     setButtonLoading(button, true, "Adicionando...", "Adicionar lugar");
 
-    const { error } = await supabaseClient.from("places").insert({
+    const { data, error } = await supabaseClient.from("places").insert({
       name: elements.placeName.value.trim(),
       note: elements.placeNote.value.trim(),
       created_by: currentUser.id
-    });
+    }).select("id, name, note, created_at").single();
 
     setButtonLoading(button, false, "Adicionando...", "Adicionar lugar");
 
     if (error) {
       console.error("Supabase place insert error:", error);
-      alert(`Nao consegui adicionar o lugar.\n\nErro do Supabase: ${error.message || "sem detalhe"}`);
+      elements.placeStatus.textContent = `Erro do Supabase: ${supabaseErrorText(error)}`;
       return;
     }
 
     elements.placeForm.reset();
-    await loadPlaces();
+    state.places = [{
+      id: data.id,
+      name: data.name,
+      note: data.note,
+      direct: true
+    }, ...state.places.filter((place) => place.id !== data.id)];
     renderPlaces();
+    elements.placeStatus.classList.add("success");
+    elements.placeStatus.textContent = "Lugar adicionado.";
     document.querySelector("#lugares").scrollIntoView({ behavior: "smooth" });
   });
 
