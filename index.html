@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nossa Historia</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#inicio" aria-label="Ir para o inicio">
+        <span class="brand-mark">N</span>
+        <span>Nossa Historia</span>
+      </a>
+      <nav class="nav-links" aria-label="Secoes">
+        <a href="#fotos">Fotos</a>
+        <a href="#momentos">Momentos</a>
+        <a href="#lugares">Lugares</a>
+      </nav>
+      <div class="topbar-actions">
+        <button class="icon-button" id="themeToggle" type="button" aria-label="Alternar tema" title="Alternar tema">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1Zm0 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm8-7h-1a1 1 0 1 0 0 2h1a1 1 0 1 0 0-2ZM5 11H4a1 1 0 1 0 0 2h1a1 1 0 1 0 0-2Zm12.66-5.66a1 1 0 0 1 1.41 1.41l-.7.71a1 1 0 0 1-1.42-1.42l.71-.7ZM6.05 16.95a1 1 0 0 1 .71 1.7l-.71.71a1 1 0 0 1-1.41-1.41l.7-.71a1 1 0 0 1 .71-.29Zm12.32.29.7.71a1 1 0 0 1-1.41 1.41l-.71-.7a1 1 0 1 1 1.42-1.42ZM5.34 5.34a1 1 0 0 1 1.42 0l.7.7a1 1 0 1 1-1.42 1.42l-.7-.71a1 1 0 0 1 0-1.41Z"/></svg>
+        </button>
+        <button class="button button-small" id="exportButton" type="button">Exportar</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" id="inicio">
+        <div class="intro-copy">
+          <p class="kicker">Um lugar so de voces</p>
+          <h1 id="heroTitle">Nossa Historia</h1>
+          <p id="heroSubtitle">Cada foto, lugar e detalhe que vale a pena guardar.</p>
+          <div class="intro-actions">
+            <a class="button" href="#adicionar">Adicionar memoria</a>
+            <button class="button button-quiet" id="resetDemoButton" type="button">Restaurar exemplo</button>
+          </div>
+        </div>
+
+        <aside class="counter-panel" aria-label="Tempo juntos">
+          <p class="panel-label">Tempo juntos</p>
+          <div class="counter-grid" id="counterGrid">
+            <div><strong data-unit="years">0</strong><span>anos</span></div>
+            <div><strong data-unit="months">0</strong><span>meses</span></div>
+            <div><strong data-unit="days">0</strong><span>dias</span></div>
+            <div><strong data-unit="hours">0</strong><span>horas</span></div>
+            <div><strong data-unit="minutes">0</strong><span>min</span></div>
+            <div><strong data-unit="seconds">0</strong><span>seg</span></div>
+          </div>
+          <p class="since-line">Desde <span id="sinceLabel">--</span></p>
+        </aside>
+      </section>
+
+      <section class="settings-band" aria-label="Detalhes do casal">
+        <form class="settings-form" id="settingsForm">
+          <label>
+            <span>Seu nome</span>
+            <input id="personOne" name="personOne" type="text" autocomplete="given-name" placeholder="Seu nome">
+          </label>
+          <label>
+            <span>Nome dela</span>
+            <input id="personTwo" name="personTwo" type="text" autocomplete="given-name" placeholder="Nome dela">
+          </label>
+          <label>
+            <span>Comeco do namoro</span>
+            <input id="startDate" name="startDate" type="date">
+          </label>
+          <button class="button" type="submit">Salvar</button>
+        </form>
+      </section>
+
+      <section class="section" id="fotos">
+        <div class="section-heading">
+          <div>
+            <p class="kicker">Galeria</p>
+            <h2>Fotos favoritas</h2>
+          </div>
+          <button class="button button-small" id="photoJumpButton" type="button">Nova foto</button>
+        </div>
+        <div class="photo-grid" id="photoGrid" aria-live="polite"></div>
+      </section>
+
+      <section class="section split" id="adicionar">
+        <div class="editor-panel">
+          <p class="kicker">Adicionar</p>
+          <h2>Nova foto</h2>
+          <form id="photoForm" class="stack-form">
+            <label>
+              <span>Arquivo</span>
+              <input id="photoInput" name="photo" type="file" accept="image/*" required>
+            </label>
+            <label>
+              <span>Legenda</span>
+              <input id="photoCaption" name="caption" type="text" maxlength="80" placeholder="Uma frase curta">
+            </label>
+            <label>
+              <span>Data</span>
+              <input id="photoDate" name="date" type="date">
+            </label>
+            <button class="button" type="submit">Adicionar foto</button>
+          </form>
+        </div>
+
+        <div class="editor-panel">
+          <p class="kicker">Registrar</p>
+          <h2>Novo momento</h2>
+          <form id="memoryForm" class="stack-form">
+            <label>
+              <span>Titulo</span>
+              <input id="memoryTitle" name="title" type="text" maxlength="70" placeholder="Ex: Nosso primeiro cinema" required>
+            </label>
+            <div class="two-fields">
+              <label>
+                <span>Data</span>
+                <input id="memoryDate" name="date" type="date" required>
+              </label>
+              <label>
+                <span>Lugar</span>
+                <input id="memoryPlace" name="place" type="text" maxlength="80" placeholder="Cidade, restaurante...">
+              </label>
+            </div>
+            <label>
+              <span>Detalhes</span>
+              <textarea id="memoryNote" name="note" maxlength="260" rows="4" placeholder="O que voce quer lembrar desse dia?"></textarea>
+            </label>
+            <button class="button" type="submit">Guardar momento</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="section" id="momentos">
+        <div class="section-heading">
+          <div>
+            <p class="kicker">Linha do tempo</p>
+            <h2>Momentos guardados</h2>
+          </div>
+        </div>
+        <div class="timeline" id="timeline" aria-live="polite"></div>
+      </section>
+
+      <section class="section places-section" id="lugares">
+        <div class="section-heading">
+          <div>
+            <p class="kicker">Mapa afetivo</p>
+            <h2>Lugares especiais</h2>
+          </div>
+        </div>
+        <div class="places-grid" id="placesGrid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <template id="emptyStateTemplate">
+      <div class="empty-state">
+        <span></span>
+        <p></p>
+      </div>
+    </template>
+
+    <script src="script.js"></script>
+  </body>
+</html>
